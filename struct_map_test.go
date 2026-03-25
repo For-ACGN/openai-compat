@@ -1,6 +1,8 @@
 package openai
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -23,4 +25,12 @@ func TestMapStruct(t *testing.T) {
 
 	require.Equal(t, m["a"], "test")
 	require.Equal(t, m["b"], float64(123))
+
+	buf := bytes.NewBuffer(make([]byte, 0, 4096))
+	encoder := json.NewEncoder(buf)
+	encoder.SetIndent("", "  ")
+	err = encoder.Encode(m)
+	require.NoError(t, err)
+	fmt.Println(buf.String())
+	require.Contains(t, buf.String(), "\"a\"")
 }
