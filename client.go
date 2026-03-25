@@ -1,7 +1,9 @@
 package openai
 
 import (
+	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -83,6 +85,45 @@ func NewClient(baseURL, apiKey string, opts *Options) (*Client, error) {
 	return &client, nil
 }
 
+func (c *Client) newPOSTRequest(path string, body io.Reader, stream bool) (*http.Request, error) {
+	return c.newRequest(http.MethodPost, path, body, stream)
+}
+
+func (c *Client) newGETRequest(path string) (*http.Request, error) {
+	return c.newRequest(http.MethodGet, path, nil, false)
+}
+
+func (c *Client) newRequest(method, path string, body io.Reader, stream bool) (*http.Request, error) {
+	if path == "" {
+		path = c.path
+	}
+	URL, err := url.JoinPath(c.base, path)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest(method, URL, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.key)
+	req.Header.Set("Content-Type", "application/json")
+	if stream {
+		req.Header.Set("cache-control", "no-cache")
+	}
+	return req, nil
+}
+
+func (c *Client) do(ctx context.Context, req *http.Request) (*http.Response, error) {
+	req = req.WithContext(ctx)
+	return c.client.Do(req)
+}
+
+func (c *Client) closeBody(resp *http.Response) {
+	_, _ = io.Copy(io.Discard, resp.Body)
+	_ = resp.Body.Close()
+}
+
+// Close is used to close connection in under http client.
 func (c *Client) Close() error {
 	c.client.CloseIdleConnections()
 	return nil
