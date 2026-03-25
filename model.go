@@ -7,6 +7,20 @@ import (
 	"net/http"
 )
 
+// Official DeepSeek Models.
+const (
+	DeepSeekChat     = "deepseek-chat"
+	DeepSeekReasoner = "deepseek-reasoner"
+)
+
+// Official Xiaomi MiMo Models.
+const (
+	MiMoV2Flash = "mimo-v2-flash"
+	MiMoV2Omni  = "mimo-v2-omni"
+	MiMoV2Pro   = "mimo-v2-pro"
+	MiMoV2TTS   = "mimo-v2-tts"
+)
+
 // Model is a model that can be used with the API.
 type Model struct {
 	Object  string `json:"object"`
