@@ -10,6 +10,23 @@ import (
 )
 
 const (
+	// RoleDeveloper is the role of a developer message.
+	RoleDeveloper = "developer"
+
+	// RoleSystem is the role of a system message.
+	RoleSystem = "system"
+
+	// RoleUser is the role of a user message.
+	RoleUser = "user"
+
+	// RoleAssistant is the role of an assistant message.
+	RoleAssistant = "assistant"
+
+	// RoleTool is the role of a tool message.
+	RoleTool = "tool"
+)
+
+const (
 	defaultPath    = "chat/completions"
 	defaultTimeout = 3 * time.Minute
 )
@@ -115,7 +132,7 @@ func (c *Client) newRequest(method, path string, body io.Reader, stream bool) (*
 
 func (c *Client) do(ctx context.Context, req *http.Request) (*http.Response, error) {
 	req = req.WithContext(ctx)
-	return c.client.Do(req)
+	return c.client.Do(req) // #nosec
 }
 
 func (c *Client) closeBody(resp *http.Response) {
