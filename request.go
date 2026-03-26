@@ -87,8 +87,8 @@ type ChatCompletionMessage struct {
 	// The role of the message sender, e.g., "user", "assistant", "system".
 	Role string `json:"role"`
 
-	// The content of the message.
-	Content string `json:"content"`
+	// The content of the message, the type can be string or []*Content.
+	Content any `json:"content"`
 
 	// Tool call that this message is responding to.
 	ToolCallID string `json:"tool_call_id,omitempty"`
@@ -99,6 +99,56 @@ type ChatCompletionMessage struct {
 	// Optional names for participants. Provides information for
 	// the model to distinguish participants with the same role.
 	Name string `json:"name,omitempty"`
+}
+
+// Content is set to ChatCompletionMessage field.
+type Content struct {
+	// the type of content like "text", "image_url", "input_audio", "video_url".
+	Type string `json:"type"`
+
+	// text data
+	Text string `json:"text,omitempty"`
+
+	// image url or base64 encoded data.
+	ImageURL *ImageURL `json:"image_url,omitempty"`
+
+	// audio url or base64 encoded data.
+	InputAudio *InputAudio `json:"input_audio,omitempty"`
+
+	// video url or base64 encoded data.
+	VideoURL *VideoURL `json:"video_url,omitempty"`
+
+	// video frames per second.
+	FPS int `json:"fps,omitempty"`
+
+	// video Resolution level.
+	MediaResolution string `json:"media_resolution,omitempty"`
+}
+
+// MarshalJSON implement interface json.Marshaler.
+func (c *Content) MarshalJSON() ([]byte, error) {
+	type alias Content
+	tmp := alias(*c)
+	mv, err := mapStruct(tmp)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(mv)
+}
+
+// ImageURL for content.
+type ImageURL struct {
+	URL string `json:"url"`
+}
+
+// InputAudio for content.
+type InputAudio struct {
+	Data string `json:"data"`
+}
+
+// VideoURL for content.
+type VideoURL struct {
+	URL string `json:"url"`
 }
 
 // ChatCompletionAudio represents audio configuration in a chat completion conversation.
