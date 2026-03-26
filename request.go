@@ -84,11 +84,21 @@ func (ccr *ChatCompletionRequest) encode() ([]byte, error) {
 
 // ChatCompletionMessage represents a single message in a chat completion conversation.
 type ChatCompletionMessage struct {
-	Role             string      `json:"role"`                        // The role of the message sender, e.g., "user", "assistant", "system".
-	Content          string      `json:"content"`                     // The content of the message.
-	ReasoningContent string      `json:"reasoning_content,omitempty"` // The reasoning content of the message (optional) when using the reasoner model with Chat Prefix Completion. When using this feature, the Prefix parameter must be set to true.
-	ToolCallID       string      `json:"tool_call_id,omitempty"`      // Tool call that this message is responding to.
-	ToolCalls        []*ToolCall `json:"tool_calls,omitempty"`        // Optional tool calls.
+	// The role of the message sender, e.g., "user", "assistant", "system".
+	Role string `json:"role"`
+
+	// The content of the message.
+	Content string `json:"content"`
+
+	// Tool call that this message is responding to.
+	ToolCallID string `json:"tool_call_id,omitempty"`
+
+	// Optional tool calls.
+	ToolCalls []*ToolCall `json:"tool_calls,omitempty"`
+
+	// Optional names for participants. Provides information for
+	// the model to distinguish participants with the same role.
+	Name string `json:"name,omitempty"`
 }
 
 // ChatCompletionAudio represents audio configuration in a chat completion conversation.
@@ -99,34 +109,50 @@ type ChatCompletionAudio struct {
 
 // Tool defines the structure for a tool.
 type Tool struct {
-	Type     string    `json:"type"`     // The type of the tool, e.g., "function" (required).
-	Function *Function `json:"function"` // The function details (required).
+	// The type of the tool, e.g., "function" (required).
+	Type string `json:"type"`
+
+	// The function details (required).
+	Function *Function `json:"function"`
+}
+
+// Function defines the structure of a function tool.
+type Function struct {
+	// The name of the function (required).
+	Name string `json:"name"`
+
+	// A description of the function (required).
+	Description string `json:"description"`
+
+	// The parameters of the function (optional).
+	Parameters *FunctionParameters `json:"parameters,omitempty"`
+}
+
+// FunctionParameters defines the parameters for a function.
+type FunctionParameters struct {
+	// The type of the parameters, e.g., "object" (required).
+	Type string `json:"type"`
+
+	// The properties of the parameters (optional).
+	Properties map[string]any `json:"properties,omitempty"`
+
+	// A list of required parameter names (optional).
+	Required []string `json:"required,omitempty"`
 }
 
 // ToolChoice defines the structure for a tool choice.
 type ToolChoice struct {
-	Type     string             `json:"type"`               // The type of the tool, e.g., "function" (required).
-	Function ToolChoiceFunction `json:"function,omitempty"` // The function details (optional, but required if type is "function").
+	// The type of the tool, e.g., "function" (required).
+	Type string `json:"type"`
+
+	// The function details (optional, but required if type is "function").
+	Function *ToolChoiceFunction `json:"function,omitempty"`
 }
 
 // ToolChoiceFunction defines the function details within ToolChoice.
 type ToolChoiceFunction struct {
 	// The name of the function to call (required).
 	Name string `json:"name"`
-}
-
-// Function defines the structure of a function tool.
-type Function struct {
-	Name        string              `json:"name"`                 // The name of the function (required).
-	Description string              `json:"description"`          // A description of the function (required).
-	Parameters  *FunctionParameters `json:"parameters,omitempty"` // The parameters of the function (optional).
-}
-
-// FunctionParameters defines the parameters for a function.
-type FunctionParameters struct {
-	Type       string         `json:"type"`                 // The type of the parameters, e.g., "object" (required).
-	Properties map[string]any `json:"properties,omitempty"` // The properties of the parameters (optional).
-	Required   []string       `json:"required,omitempty"`   // A list of required parameter names (optional).
 }
 
 // Thinking is used to control enable reasoning.
@@ -136,5 +162,6 @@ type Thinking struct {
 
 // ResponseFormat defines the structure for the response format.
 type ResponseFormat struct {
-	Type string `json:"type"` // The desired response format, either "text" or "json_object".
+	// The desired response format, either "text" or "json_object".
+	Type string `json:"type"`
 }

@@ -12,7 +12,7 @@ type ToolCall struct {
 	Index int `json:"index"`
 
 	// The function details for the call.
-	Function ToolCallFunction `json:"function"`
+	Function *ToolCallFunction `json:"function"`
 }
 
 // ToolCallFunction represents a function call in the tool.
