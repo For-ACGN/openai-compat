@@ -1,6 +1,7 @@
 package openai
 
 import (
+	"context"
 	"encoding/json"
 	"maps"
 )
@@ -9,6 +10,9 @@ import (
 type ChatCompletionRequest struct {
 	// The ID of the model to use (required).
 	Model string `json:"model"`
+
+	// use stream mode, usually it set by methods about new request.
+	Stream bool `json:"stream"`
 
 	// A list of messages comprising the conversation (required).
 	Messages []*ChatCompletionMessage `json:"messages"`
@@ -50,35 +54,52 @@ type ChatCompletionRequest struct {
 	// the hierarchy is top-level with ChatCompletionRequest.
 	Extra map[string]any `json:"-"`
 
-	// stream internal switch.
-	stream bool
+	// context for control this request.
+	ctx context.Context
 }
 
-func (ccr *ChatCompletionRequest) encode() ([]byte, error) {
-	mv, err := mapStruct(ccr)
+// NewChatCompletionRequest is used to create a ChatCompletionRequest.
+func NewChatCompletionRequest(stream bool) *ChatCompletionRequest {
+	return &ChatCompletionRequest{
+		Stream: stream,
+		ctx:    context.Background(),
+	}
+}
+
+// NewChatCompletionRequestWithContext is used to create a ChatCompletionRequest with context.
+func NewChatCompletionRequestWithContext(ctx context.Context, stream bool) *ChatCompletionRequest {
+	return &ChatCompletionRequest{
+		Stream: stream,
+		ctx:    ctx,
+	}
+}
+
+// MarshalJSON implement interface json.Marshaler.
+func (req *ChatCompletionRequest) MarshalJSON() ([]byte, error) {
+	type alias ChatCompletionRequest
+	tmp := alias(*req)
+	mv, err := mapStruct(tmp)
 	if err != nil {
 		return nil, err
 	}
 	// process argument about thinking
 	thinking := new(Thinking)
-	if ccr.Thinking {
+	if req.Thinking {
 		thinking.Type = "enabled"
 	} else {
 		thinking.Type = "disabled"
 	}
 	mv["thinking"] = thinking
 	// process different fields about max_tokens.
-	if ccr.MaxTokens != 0 {
-		switch ccr.Model {
+	if req.MaxTokens != 0 {
+		switch req.Model {
 		case MiMoV2Flash, MiMoV2Omni, MiMoV2Pro, MiMoV2TTS:
 			delete(mv, "max_tokens")
-			mv["max_completion_tokens"] = ccr.MaxTokens
+			mv["max_completion_tokens"] = req.MaxTokens
 		}
 	}
-	// set stream mode
-	mv["stream"] = ccr.stream
 	// append extra arguments
-	maps.Copy(mv, ccr.Extra)
+	maps.Copy(mv, req.Extra)
 	return json.Marshal(mv)
 }
 
