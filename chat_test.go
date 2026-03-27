@@ -224,7 +224,78 @@ func TestClient_CreateChatCompletion(t *testing.T) {
 	})
 
 	t.Run("with audio content", func(t *testing.T) {
+		t.Run("url", func(t *testing.T) {
+			req := NewChatCompletionRequest(false)
+			req.Model = MiMoV2Omni
+			req.Messages = []*ChatCompletionMessage{
+				{
+					Role:    RoleSystem,
+					Content: "I'm writing a test, so please add prefix <test> in response",
+				},
+				{
+					Role: RoleUser,
+					Content: []*Content{
+						{Text: "please describe the content of the audio"},
+						{AudioURL: testAudioURL},
+					},
+				},
+			}
 
+			resp, err := client.CreateChatCompletion(req)
+			require.NoError(t, err)
+
+			require.NotEmpty(t, resp.ID)
+			require.Equal(t, MiMoV2Omni, resp.Model)
+			require.NotEmpty(t, resp.Choices)
+			require.NotZero(t, resp.Usage)
+			require.NotZero(t, resp.Created)
+
+			response := resp.Choices[0].Message.Content
+			fmt.Println(response)
+			require.Contains(t, response, "<test>")
+			require.Contains(t, response, "day")
+			require.Contains(t, response, "morning")
+
+			testPrintResponse(resp)
+		})
+
+		t.Run("data", func(t *testing.T) {
+			audio, err := os.ReadFile("testdata/audio.wav")
+			require.NoError(t, err)
+
+			req := NewChatCompletionRequest(false)
+			req.Model = MiMoV2Omni
+			req.Messages = []*ChatCompletionMessage{
+				{
+					Role:    RoleSystem,
+					Content: "I'm writing a test, so please add prefix <test> in response",
+				},
+				{
+					Role: RoleUser,
+					Content: []*Content{
+						{Text: "please describe the content of the audio"},
+						{AudioData: audio},
+					},
+				},
+			}
+
+			resp, err := client.CreateChatCompletion(req)
+			require.NoError(t, err)
+
+			require.NotEmpty(t, resp.ID)
+			require.Equal(t, MiMoV2Omni, resp.Model)
+			require.NotEmpty(t, resp.Choices)
+			require.NotZero(t, resp.Usage)
+			require.NotZero(t, resp.Created)
+
+			response := resp.Choices[0].Message.Content
+			fmt.Println(response)
+			require.Contains(t, response, "<test>")
+			require.Contains(t, response, "day")
+			require.Contains(t, response, "morning")
+
+			testPrintResponse(resp)
+		})
 	})
 
 	t.Run("with video content", func(t *testing.T) {
