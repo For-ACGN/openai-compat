@@ -15,6 +15,23 @@ const (
 	testVideoURL = "https://example-files.cnbj1.mi-fds.com/example-files/video/video_example.mp4"
 )
 
+var testToolGetLocation = &Function{
+	Name:        "GetLocation",
+	Description: "get user current location",
+}
+
+var testToolGetTemperature = &Function{
+	Name:        "GetTemperature",
+	Description: "get temperature by city name",
+	Parameters: &FunctionParameters{
+		Type: "object",
+		Properties: map[string]*Property{
+			"city": {Type: "string", Description: "input city name"},
+		},
+		Required: []string{"city"},
+	},
+}
+
 func TestClient_CreateChatCompletion(t *testing.T) {
 	client := testNewClient(t)
 
@@ -371,6 +388,86 @@ func TestClient_CreateChatCompletion(t *testing.T) {
 
 			testPrintResponse(resp)
 		})
+	})
+
+	t.Run("tool call", func(t *testing.T) {
+		req := NewChatCompletionRequest(false)
+		req.Model = MiMoV2Omni
+		req.Messages = []*ChatCompletionMessage{
+			{
+				Role:    RoleSystem,
+				Content: "I'm writing a test, so please add prefix <test> in response",
+			},
+			{
+				Role:    RoleUser,
+				Content: "What is the current temperature?",
+			},
+		}
+		req.Tools = []any{
+			testToolGetLocation,
+			testToolGetTemperature,
+		}
+
+		resp, err := client.CreateChatCompletion(req)
+		require.NoError(t, err)
+
+		require.NotEmpty(t, resp.ID)
+		require.Equal(t, MiMoV2Omni, resp.Model)
+		require.NotEmpty(t, resp.Choices)
+		require.NotZero(t, resp.Usage)
+		require.NotZero(t, resp.Created)
+
+		message := resp.Choices[0].Message
+		response := message.Content
+		fmt.Println(response)
+		require.Contains(t, response, "temperature")
+
+		require.Equal(t, RoleAssistant, message.Role)
+
+		toolCalls := message.ToolCalls
+		require.NotEmpty(t, toolCalls)
+
+		toolCall := toolCalls[0]
+		require.Equal(t, "function", toolCall.Type)
+		require.NotEmpty(t, toolCall.ID)
+		require.Equal(t, 0, toolCall.Index)
+
+		fn := toolCalls[0].Function
+		require.Equal(t, "GetLocation", fn.Name)
+		require.Equal(t, "{}", fn.Arguments)
+
+		question := &ChatCompletionMessage{
+			Role:       RoleAssistant,
+			Content:    message.Content,
+			ToolCallID: toolCall.ID,
+			ToolCalls:  message.ToolCalls,
+		}
+		req.Messages = append(req.Messages, question)
+		req.Messages = append(req.Messages, &ChatCompletionMessage{
+			Role:       RoleTool,
+			Content:    "the current location is Shanghai",
+			ToolCallID: toolCall.ID,
+			ToolCalls:  toolCalls,
+		})
+
+		resp, err = client.CreateChatCompletion(req)
+		require.NoError(t, err)
+
+		require.NotEmpty(t, resp.ID)
+		require.Equal(t, MiMoV2Omni, resp.Model)
+		require.NotEmpty(t, resp.Choices)
+		require.NotZero(t, resp.Usage)
+		require.NotZero(t, resp.Created)
+
+		message = resp.Choices[0].Message
+		response = message.Content
+		fmt.Println(response)
+		require.Contains(t, response, "Shanghai")
+
+	})
+
+	t.Run("web search", func(t *testing.T) {
+
 	})
 
 	err := client.Close()
