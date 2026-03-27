@@ -60,18 +60,12 @@ type ChatCompletionRequest struct {
 
 // NewChatCompletionRequest is used to create a ChatCompletionRequest.
 func NewChatCompletionRequest(stream bool) *ChatCompletionRequest {
-	return &ChatCompletionRequest{
-		Stream: stream,
-		ctx:    context.Background(),
-	}
+	return NewChatCompletionRequestWithContext(context.Background(), stream)
 }
 
 // NewChatCompletionRequestWithContext is used to create a ChatCompletionRequest with context.
 func NewChatCompletionRequestWithContext(ctx context.Context, stream bool) *ChatCompletionRequest {
-	return &ChatCompletionRequest{
-		Stream: stream,
-		ctx:    ctx,
-	}
+	return &ChatCompletionRequest{Stream: stream, ctx: ctx}
 }
 
 // MarshalJSON implement interface json.Marshaler.
@@ -127,23 +121,18 @@ type Content struct {
 	// the type of content like "text", "image_url", "input_audio", "video_url".
 	Type string `json:"type"`
 
-	// text data
-	Text string `json:"text,omitempty"`
+	Text string
 
-	// image url or base64 encoded data.
-	ImageURL *ImageURL `json:"image_url,omitempty"`
+	ImageURL  string
+	ImageData []byte
 
-	// audio url or base64 encoded data.
-	InputAudio *InputAudio `json:"input_audio,omitempty"`
+	AudioURL  string
+	AudioData []byte
 
-	// video url or base64 encoded data.
-	VideoURL *VideoURL `json:"video_url,omitempty"`
-
-	// video frames per second.
-	FPS int `json:"fps,omitempty"`
-
-	// video Resolution level.
-	MediaResolution string `json:"media_resolution,omitempty"`
+	VideoURL      string
+	VideoData     []byte
+	VideoFPS      int
+	VideoResLevel string
 }
 
 // MarshalJSON implement interface json.Marshaler.
@@ -154,6 +143,7 @@ func (c *Content) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return json.Marshal(mv)
 }
 
@@ -183,8 +173,8 @@ type Tool struct {
 	// The type of the tool, e.g., "function" (required).
 	Type string `json:"type"`
 
-	// The function details (required).
-	Function *Function `json:"function"`
+	// The function details
+	Function *Function `json:"function"` // TODO replace it
 }
 
 // Function defines the structure of a function tool.
@@ -197,6 +187,13 @@ type Function struct {
 
 	// The parameters of the function (optional).
 	Parameters *FunctionParameters `json:"parameters,omitempty"`
+
+	// whether to enable strict pattern adherence when
+	// generating function calls. If set to true, the
+	// model will strictly adhere to the exact pattern
+	// defined in the parameters field. When strict is
+	// true, only a subset of JSON patterns are supported.
+	Strict bool `json:"strict,omitempty"`
 }
 
 // FunctionParameters defines the parameters for a function.
