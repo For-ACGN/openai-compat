@@ -2,8 +2,11 @@ package openai
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"maps"
+	"net/http"
 )
 
 // ChatCompletionRequest defines the structure for a chat completion request.
@@ -118,9 +121,6 @@ type ChatCompletionMessage struct {
 
 // Content is set to ChatCompletionMessage field.
 type Content struct {
-	// the type of content like "text", "image_url", "input_audio", "video_url".
-	Type string `json:"type"`
-
 	Text string
 
 	ImageURL  string
@@ -137,29 +137,55 @@ type Content struct {
 
 // MarshalJSON implement interface json.Marshaler.
 func (c *Content) MarshalJSON() ([]byte, error) {
-	type alias Content
-	tmp := alias(*c)
-	mv, err := mapStruct(tmp)
-	if err != nil {
-		return nil, err
+	mv := make(map[string]any)
+	switch {
+	case c.Text != "":
+		mv["type"] = "text"
+		mv["text"] = c.Text
+	case c.ImageURL != "":
+		mv["type"] = "image_url"
+		mv["image_url"] = &inputImage{URL: c.ImageURL}
+	case len(c.ImageData) > 0:
+		mv["type"] = "image_url"
+		mime := http.DetectContentType(c.ImageData)
+		data := base64.StdEncoding.EncodeToString(c.ImageData)
+		mv["image_url"] = &inputImage{URL: fmt.Sprintf("data:%s;base64,%s", mime, data)}
+	case c.AudioURL != "":
+		mv["type"] = "input_audio"
+		mv["input_audio"] = &inputAudio{Data: c.AudioURL}
+	case len(c.AudioData) > 0:
+		mv["type"] = "input_audio"
+		mime := http.DetectContentType(c.AudioData)
+		data := base64.StdEncoding.EncodeToString(c.AudioData)
+		mv["input_audio"] = &inputAudio{Data: fmt.Sprintf("data:%s;base64,%s", mime, data)}
+	case c.VideoURL != "":
+		mv["type"] = "video_url"
+		mv["video_url"] = &inputVideo{URL: c.VideoURL}
+	case len(c.VideoData) > 0:
+		mv["type"] = "video_url"
+		mime := http.DetectContentType(c.VideoData)
+		data := base64.StdEncoding.EncodeToString(c.VideoData)
+		mv["video_url"] = &inputVideo{URL: fmt.Sprintf("data:%s;base64,%s", mime, data)}
 	}
-
+	if c.VideoFPS != 0 {
+		mv["fps"] = c.VideoFPS
+	}
+	if c.VideoResLevel != "" {
+		mv["media_resolution"] = c.VideoResLevel
+	}
 	return json.Marshal(mv)
 }
 
-// ImageURL for content.
-type ImageURL struct {
-	URL string `json:"url"`
+type inputImage struct {
+	URL string `json:"url,omitempty"`
 }
 
-// InputAudio for content.
-type InputAudio struct {
-	Data string `json:"data"`
+type inputAudio struct {
+	Data string `json:"data,omitempty"`
 }
 
-// VideoURL for content.
-type VideoURL struct {
-	URL string `json:"url"`
+type inputVideo struct {
+	URL string `json:"url,omitempty"`
 }
 
 // ChatCompletionAudio represents audio configuration in a chat completion conversation.
