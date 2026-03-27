@@ -21,7 +21,7 @@ type ChatCompletionRequest struct {
 	Audio *ChatCompletionAudio `json:"audio,omitempty"`
 
 	// A list of tools the model may use (optional).
-	Tools []*Tool `json:"tools,omitempty"`
+	Tools []any `json:"tools,omitempty"`
 
 	// Controls which (if any) tool is called by the model (optional).
 	ToolChoice any `json:"tool_choice,omitempty"`
@@ -164,21 +164,17 @@ type VideoURL struct {
 
 // ChatCompletionAudio represents audio configuration in a chat completion conversation.
 type ChatCompletionAudio struct {
-	Format string `json:"format"` // set output audio format like wav, mp3.
-	Voice  string `json:"voice"`  // set the voice of the model.
-}
+	// set output audio format like wav, mp3.
+	Format string `json:"format"`
 
-// Tool defines the structure for a tool.
-type Tool struct {
-	// The type of the tool, e.g., "function" (required).
-	Type string `json:"type"`
-
-	// The function details
-	Function *Function `json:"function"` // TODO replace it
+	// set the voice of the model.
+	Voice string `json:"voice"`
 }
 
 // Function defines the structure of a function tool.
 type Function struct {
+	model string
+
 	// The name of the function (required).
 	Name string `json:"name"`
 
@@ -196,6 +192,25 @@ type Function struct {
 	Strict bool `json:"strict,omitempty"`
 }
 
+// NewFunctionTool is used to create a function tool.
+func NewFunctionTool(model string) *Function {
+	return &Function{model: model}
+}
+
+// MarshalJSON implement interface json.Marshaler.
+func (f *Function) MarshalJSON() ([]byte, error) {
+	type alias Function
+	tmp := alias(*f)
+	mv, err := mapStruct(tmp)
+	if err != nil {
+		return nil, err
+	}
+	nm := make(map[string]any)
+	nm["type"] = "function"
+	nm["function"] = mv
+	return json.Marshal(nm)
+}
+
 // FunctionParameters defines the parameters for a function.
 type FunctionParameters struct {
 	// The type of the parameters, e.g., "object" (required).
@@ -206,6 +221,38 @@ type FunctionParameters struct {
 
 	// A list of required parameter names (optional).
 	Required []string `json:"required,omitempty"`
+}
+
+// WebSearch is special tool from Xiaomi MiMo.
+type WebSearch struct {
+	model string
+
+	Type       string `json:"type"`
+	Force      bool   `json:"force"`
+	Limit      int    `json:"limit,omitempty"`
+	MaxKeyword int    `json:"max_keyword,omitempty"`
+}
+
+// NewWebSearchTool is used to create tool by model.
+func NewWebSearchTool(model string) *WebSearch {
+	return &WebSearch{model: model}
+}
+
+// MarshalJSON implement interface json.Marshaler.
+func (ws *WebSearch) MarshalJSON() ([]byte, error) {
+	type alias WebSearch
+	tmp := alias(*ws)
+	mv, err := mapStruct(tmp)
+	if err != nil {
+		return nil, err
+	}
+	var typ string
+	switch ws.model {
+	case MiMoV2Flash, MiMoV2Omni, MiMoV2Pro:
+		typ = "web_search"
+	}
+	mv["type"] = typ
+	return json.Marshal(mv)
 }
 
 // ToolChoice defines the structure for a tool choice.
