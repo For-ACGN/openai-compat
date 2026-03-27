@@ -2,6 +2,7 @@ package openai
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
@@ -44,12 +45,7 @@ func TestClient_CreateChatCompletion(t *testing.T) {
 		fmt.Println(response)
 		require.Contains(t, response, "<test>")
 
-		fmt.Println(resp.ID)
-		fmt.Println(resp.Model)
-		fmt.Println(resp.Created)
-
-		spew.Dump(resp.Choices)
-		spew.Dump(resp.Usage)
+		testPrintResponse(resp)
 	})
 
 	t.Run("thinking", func(t *testing.T) {
@@ -84,12 +80,7 @@ func TestClient_CreateChatCompletion(t *testing.T) {
 		fmt.Println(reason)
 		require.NotEmpty(t, reason)
 
-		fmt.Println(resp.ID)
-		fmt.Println(resp.Model)
-		fmt.Println(resp.Created)
-
-		spew.Dump(resp.Choices)
-		spew.Dump(resp.Usage)
+		testPrintResponse(resp)
 	})
 
 	t.Run("max tokens", func(t *testing.T) {
@@ -121,12 +112,7 @@ func TestClient_CreateChatCompletion(t *testing.T) {
 		require.Contains(t, response, "<test>")
 		require.Less(t, len(response), 20)
 
-		fmt.Println(resp.ID)
-		fmt.Println(resp.Model)
-		fmt.Println(resp.Created)
-
-		spew.Dump(resp.Choices)
-		spew.Dump(resp.Usage)
+		testPrintResponse(resp)
 	})
 
 	t.Run("multi text content", func(t *testing.T) {
@@ -159,12 +145,7 @@ func TestClient_CreateChatCompletion(t *testing.T) {
 		fmt.Println(response)
 		require.Contains(t, response, "<test>")
 
-		fmt.Println(resp.ID)
-		fmt.Println(resp.Model)
-		fmt.Println(resp.Created)
-
-		spew.Dump(resp.Choices)
-		spew.Dump(resp.Usage)
+		testPrintResponse(resp)
 	})
 
 	t.Run("with image content", func(t *testing.T) {
@@ -200,12 +181,45 @@ func TestClient_CreateChatCompletion(t *testing.T) {
 			require.Contains(t, response, "tree")
 			require.Contains(t, response, "light")
 
-			fmt.Println(resp.ID)
-			fmt.Println(resp.Model)
-			fmt.Println(resp.Created)
+			testPrintResponse(resp)
+		})
 
-			spew.Dump(resp.Choices)
-			spew.Dump(resp.Usage)
+		t.Run("data", func(t *testing.T) {
+			image, err := os.ReadFile("testdata/image.png")
+			require.NoError(t, err)
+
+			req := NewChatCompletionRequest(false)
+			req.Model = MiMoV2Omni
+			req.Messages = []*ChatCompletionMessage{
+				{
+					Role:    RoleSystem,
+					Content: "I'm writing a test, so please add prefix <test> in response",
+				},
+				{
+					Role: RoleUser,
+					Content: []*Content{
+						{Text: "What is in this picture?"},
+						{ImageData: image},
+					},
+				},
+			}
+
+			resp, err := client.CreateChatCompletion(req)
+			require.NoError(t, err)
+
+			require.NotEmpty(t, resp.ID)
+			require.Equal(t, MiMoV2Omni, resp.Model)
+			require.NotEmpty(t, resp.Choices)
+			require.NotZero(t, resp.Usage)
+			require.NotZero(t, resp.Created)
+
+			response := resp.Choices[0].Message.Content
+			fmt.Println(response)
+			require.Contains(t, response, "<test>")
+			require.Contains(t, response, "tree")
+			require.Contains(t, response, "light")
+
+			testPrintResponse(resp)
 		})
 	})
 
@@ -219,4 +233,13 @@ func TestClient_CreateChatCompletion(t *testing.T) {
 
 	err := client.Close()
 	require.NoError(t, err)
+}
+
+func testPrintResponse(resp *ChatCompletionResponse) {
+	fmt.Println(resp.ID)
+	fmt.Println(resp.Model)
+	fmt.Println(resp.Created)
+
+	spew.Dump(resp.Choices)
+	spew.Dump(resp.Usage)
 }
