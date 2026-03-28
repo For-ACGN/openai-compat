@@ -1,8 +1,12 @@
 package openai
 
 import (
-	"context"
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"strings"
 )
 
 // ChatCompletionResponse represents a response from the chat completion endpoint.
@@ -58,13 +62,39 @@ type Message struct {
 
 // ChatCompletionStream is a response stream.
 type ChatCompletionStream struct {
-	ctx  context.Context
 	resp *http.Response
 }
 
 // Receive is used to receive delta data.
 func (s *ChatCompletionStream) Receive() (*ChatCompletionStreamResponse, error) {
-	return nil, nil
+	reader := bufio.NewReader(s.resp.Body)
+	for {
+		line, err := reader.ReadString('\n') // Read until newline
+		if err != nil {
+			if err == io.EOF {
+				return nil, io.EOF
+			}
+			return nil, fmt.Errorf("failed to read stream: %s", err)
+		}
+		line = strings.TrimSpace(line)
+		if line == "data: [DONE]" {
+			return nil, io.EOF
+		}
+		if len(line) > 6 && line[:6] == "data: " {
+			trimmed := []byte(line[6:])
+			var resp ChatCompletionStreamResponse
+			err = json.Unmarshal(trimmed, &resp)
+			if err != nil {
+				return nil, fmt.Errorf("unmarshal error: %s, raw data: %s", err, trimmed)
+			}
+			return &resp, nil
+		}
+	}
+}
+
+// Close is used to close the response body.
+func (s *ChatCompletionStream) Close() error {
+	return s.resp.Body.Close()
 }
 
 // ChatCompletionStreamResponse represents a stream from the chat completion endpoint.
