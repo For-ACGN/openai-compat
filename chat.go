@@ -39,3 +39,30 @@ func (c *Client) CreateChatCompletion(req *ChatCompletionRequest) (*ChatCompleti
 	}
 	return &cr, nil
 }
+
+// CreateChatCompletionStream sends a chat completion request and returns the stream.
+func (c *Client) CreateChatCompletionStream(req *ChatCompletionRequest) (*ChatCompletionStream, error) {
+	buf := bytes.NewBuffer(make([]byte, 0, 4096))
+	err := json.NewEncoder(buf).Encode(req)
+	if err != nil {
+		return nil, err
+	}
+	hr, err := c.newPOSTRequest("", buf, false)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.do(req.ctx, hr)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode >= http.StatusBadRequest {
+		c.closeBody(resp)
+		return nil, handleError(resp)
+	}
+
+	stream := ChatCompletionStream{
+		resp: resp,
+	}
+	return &stream, nil
+}
