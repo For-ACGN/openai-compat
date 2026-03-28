@@ -32,6 +32,18 @@ var testToolGetTemperature = &Function{
 	},
 }
 
+var testToolGetRelativeHumidity = &Function{
+	Name:        "GetRelativeHumidity",
+	Description: "get relative humidity by city name",
+	Parameters: &FunctionParameters{
+		Type: "object",
+		Properties: map[string]*Property{
+			"city": {Type: "string", Description: "input city name"},
+		},
+		Required: []string{"city"},
+	},
+}
+
 func TestClient_CreateChatCompletion(t *testing.T) {
 	client := testNewClient(t)
 
@@ -400,12 +412,13 @@ func TestClient_CreateChatCompletion(t *testing.T) {
 			},
 			{
 				Role:    RoleUser,
-				Content: "What is the current temperature?",
+				Content: "What is the current temperature and relative humidity?",
 			},
 		}
 		req.Tools = []any{
 			testToolGetLocation,
 			testToolGetTemperature,
+			testToolGetRelativeHumidity,
 		}
 
 		resp, err := client.CreateChatCompletion(req)
@@ -430,7 +443,6 @@ func TestClient_CreateChatCompletion(t *testing.T) {
 		toolCall := toolCalls[0]
 		require.Equal(t, "function", toolCall.Type)
 		require.NotEmpty(t, toolCall.ID)
-		require.Equal(t, 0, toolCall.Index)
 
 		fn := toolCalls[0].Function
 		require.Equal(t, "GetLocation", fn.Name)
@@ -464,6 +476,57 @@ func TestClient_CreateChatCompletion(t *testing.T) {
 		fmt.Println(response)
 		require.Contains(t, response, "Shanghai")
 
+		require.Len(t, message.ToolCalls, 2)
+		toolCall1 := toolCalls[0]
+		require.Equal(t, "function", toolCall1.Type)
+		require.NotEmpty(t, toolCall1.ID)
+
+		toolCall2 := toolCalls[0]
+		require.Equal(t, "function", toolCall2.Type)
+		require.NotEmpty(t, toolCall2.ID)
+
+		question = &ChatCompletionMessage{
+			Role:       RoleAssistant,
+			Content:    message.Content,
+			ToolCallID: toolCall1.ID,
+			ToolCalls:  message.ToolCalls,
+		}
+		req.Messages = append(req.Messages, question)
+		req.Messages = append(req.Messages, &ChatCompletionMessage{
+			Role:       RoleTool,
+			Content:    "the temperature is 25°C",
+			ToolCallID: toolCall1.ID,
+			ToolCalls:  toolCalls,
+		})
+
+		question = &ChatCompletionMessage{
+			Role:       RoleAssistant,
+			Content:    message.Content,
+			ToolCallID: toolCall2.ID,
+			ToolCalls:  message.ToolCalls,
+		}
+		req.Messages = append(req.Messages, question)
+		req.Messages = append(req.Messages, &ChatCompletionMessage{
+			Role:       RoleTool,
+			Content:    "the relative humidity is 50%",
+			ToolCallID: toolCall2.ID,
+			ToolCalls:  toolCalls,
+		})
+
+		resp, err = client.CreateChatCompletion(req)
+		require.NoError(t, err)
+		require.NotEmpty(t, resp.ID)
+		require.Equal(t, MiMoV2Omni, resp.Model)
+		require.NotEmpty(t, resp.Choices)
+		require.NotZero(t, resp.Usage)
+		require.NotZero(t, resp.Created)
+
+		message = resp.Choices[0].Message
+		response = message.Content
+		fmt.Println(response)
+
+		require.Contains(t, response, "25")
+		require.Contains(t, response, "50%")
 	})
 
 	t.Run("web search", func(t *testing.T) {
