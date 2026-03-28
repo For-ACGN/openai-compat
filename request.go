@@ -243,10 +243,16 @@ type FunctionParameters struct {
 	Type string `json:"type"`
 
 	// The properties of the parameters (optional).
-	Properties map[string]any `json:"properties,omitempty"`
+	Properties map[string]*Property `json:"properties,omitempty"`
 
 	// A list of required parameter names (optional).
 	Required []string `json:"required,omitempty"`
+}
+
+// Property is the function parameter property.
+type Property struct {
+	Type        string `json:"type"`
+	Description string `json:"description"`
 }
 
 // WebSearch is special tool from Xiaomi MiMo.
