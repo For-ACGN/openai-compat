@@ -16,11 +16,15 @@ const (
 )
 
 var testToolGetLocation = &Function{
+	model: MiMoV2Omni,
+
 	Name:        "GetLocation",
 	Description: "get user current location",
 }
 
 var testToolGetTemperature = &Function{
+	model: MiMoV2Omni,
+
 	Name:        "GetTemperature",
 	Description: "get temperature by city name",
 	Parameters: &FunctionParameters{
@@ -33,6 +37,8 @@ var testToolGetTemperature = &Function{
 }
 
 var testToolGetRelativeHumidity = &Function{
+	model: MiMoV2Omni,
+
 	Name:        "GetRelativeHumidity",
 	Description: "get relative humidity by city name",
 	Parameters: &FunctionParameters{
@@ -436,7 +442,6 @@ func TestClient_CreateChatCompletion(t *testing.T) {
 		require.Contains(t, response, "temperature")
 
 		require.Equal(t, RoleAssistant, message.Role)
-
 		toolCalls := message.ToolCalls
 		require.NotEmpty(t, toolCalls)
 
@@ -530,7 +535,34 @@ func TestClient_CreateChatCompletion(t *testing.T) {
 	})
 
 	t.Run("web search", func(t *testing.T) {
+		req := NewChatCompletionRequest(false)
+		req.Model = MiMoV2Omni
+		req.Messages = []*ChatCompletionMessage{
+			{
+				Role:    RoleSystem,
+				Content: "I'm writing a test, so please add prefix <test> in response",
+			},
+			{
+				Role:    RoleUser,
+				Content: "What is the current temperature in Shanghai",
+			},
+		}
+		req.Tools = []any{
+			NewWebSearchTool(MiMoV2Omni),
+		}
 
+		resp, err := client.CreateChatCompletion(req)
+		require.NoError(t, err)
+
+		require.NotEmpty(t, resp.ID)
+		require.Equal(t, MiMoV2Omni, resp.Model)
+		require.NotEmpty(t, resp.Choices)
+		require.NotZero(t, resp.Usage)
+		require.NotZero(t, resp.Created)
+
+		response := resp.Choices[0].Message.Content
+		fmt.Println(response)
+		require.Contains(t, response, "°C")
 	})
 
 	err := client.Close()
