@@ -3,12 +3,17 @@ package openai
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 )
 
 // CreateChatCompletion sends a chat completion request and returns the generated response.
 func (c *Client) CreateChatCompletion(req *ChatCompletionRequest) (*ChatCompletionResponse, error) {
+	if req.Stream {
+		return nil, errors.New("chat completion request is stream type")
+	}
+
 	buf := bytes.NewBuffer(make([]byte, 0, 4096))
 	err := json.NewEncoder(buf).Encode(req)
 	if err != nil {
@@ -42,6 +47,10 @@ func (c *Client) CreateChatCompletion(req *ChatCompletionRequest) (*ChatCompleti
 
 // CreateChatCompletionStream sends a chat completion request and returns the stream.
 func (c *Client) CreateChatCompletionStream(req *ChatCompletionRequest) (*ChatCompletionStream, error) {
+	if !req.Stream {
+		return nil, errors.New("chat completion request is not stream type")
+	}
+
 	buf := bytes.NewBuffer(make([]byte, 0, 4096))
 	err := json.NewEncoder(buf).Encode(req)
 	if err != nil {
