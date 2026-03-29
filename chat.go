@@ -71,7 +71,7 @@ func (c *Client) CreateChatCompletion(req *ChatCompletionRequest) (*ChatCompleti
 	}
 	defer c.closeBody(resp)
 	if resp.StatusCode >= http.StatusBadRequest {
-		return nil, handleError(resp)
+		return nil, handleAPIError(resp)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -108,7 +108,7 @@ func (c *Client) CreateChatCompletionStream(req *ChatCompletionRequest) (*ChatCo
 	}
 	if resp.StatusCode >= http.StatusBadRequest {
 		c.closeBody(resp)
-		return nil, handleError(resp)
+		return nil, handleAPIError(resp)
 	}
 
 	stream := ChatCompletionStream{

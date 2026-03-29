@@ -22,7 +22,7 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("code: %s, %s", e.APICode, e.Message)
 }
 
-type rawError struct {
+type rawAPIError struct {
 	Error struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
@@ -31,7 +31,7 @@ type rawError struct {
 	} `json:"error"`
 }
 
-func handleError(resp *http.Response) error {
+func handleAPIError(resp *http.Response) error {
 	data, _ := io.ReadAll(resp.Body)
 	if strings.HasPrefix(string(data), "<html>") {
 		return &APIError{
@@ -40,7 +40,7 @@ func handleError(resp *http.Response) error {
 		}
 	}
 	// return the standard api error
-	re := new(rawError)
+	re := new(rawAPIError)
 	err := json.Unmarshal(data, re)
 	if err == nil {
 		return &APIError{

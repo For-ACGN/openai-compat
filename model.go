@@ -46,7 +46,7 @@ func (c *Client) Models(ctx context.Context) ([]string, error) {
 	}
 	defer c.closeBody(resp)
 	if resp.StatusCode >= http.StatusBadRequest {
-		return nil, handleError(resp)
+		return nil, handleAPIError(resp)
 	}
 
 	body, err := io.ReadAll(resp.Body)

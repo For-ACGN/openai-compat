@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHandleError(t *testing.T) {
+func TestHandleAPIError(t *testing.T) {
 	client := testNewClient(t)
 
 	req, err := client.newGETRequest("models_invalid")
@@ -17,7 +17,7 @@ func TestHandleError(t *testing.T) {
 	resp, err := client.do(context.Background(), req)
 	require.NoError(t, err)
 
-	apiErr := handleError(resp)
+	apiErr := handleAPIError(resp)
 	ae, ok := apiErr.(*APIError)
 	require.True(t, ok)
 	fmt.Println(ae)
