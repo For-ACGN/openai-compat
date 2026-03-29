@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 )
 
 // ChatCompletionResponse represents a response from the chat completion endpoint.
@@ -76,7 +75,6 @@ func (s *ChatCompletionStream) Receive() (*ChatCompletionStreamResponse, error) 
 			}
 			return nil, fmt.Errorf("failed to read stream: %s", err)
 		}
-		line = strings.TrimSpace(line)
 		if line == "data: [DONE]" {
 			return nil, io.EOF
 		}
@@ -86,6 +84,9 @@ func (s *ChatCompletionStream) Receive() (*ChatCompletionStreamResponse, error) 
 			err = json.Unmarshal(trimmed, &resp)
 			if err != nil {
 				return nil, fmt.Errorf("unmarshal error: %s, raw data: %s", err, trimmed)
+			}
+			if resp.Usage == nil {
+				resp.Usage = new(Usage)
 			}
 			return &resp, nil
 		}
