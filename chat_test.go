@@ -2,6 +2,7 @@ package openai
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"testing"
 
@@ -563,6 +564,53 @@ func TestClient_CreateChatCompletion(t *testing.T) {
 		response := resp.Choices[0].Message.Content
 		fmt.Println(response)
 		require.Contains(t, response, "°C")
+	})
+
+	err := client.Close()
+	require.NoError(t, err)
+}
+
+func TestClient_CreateChatCompletionStream(t *testing.T) {
+	client := testNewClient(t)
+
+	t.Run("common", func(t *testing.T) {
+		req := NewChatCompletionRequest(true)
+		req.Model = MiMoV2Omni
+		req.Messages = []*ChatCompletionMessage{
+			{
+				Role:    RoleSystem,
+				Content: "I'm writing a test, so please add prefix <test> in response",
+			},
+			{
+				Role:    RoleUser,
+				Content: "Hello LLM!",
+			},
+		}
+
+		resp, err := client.CreateChatCompletionStream(req)
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, resp.Close())
+		}()
+
+		var response string
+		for {
+			stream, err := resp.Receive()
+			if err == io.EOF {
+				break
+			}
+			require.NoError(t, err)
+
+			require.NotEmpty(t, stream.ID)
+			require.Equal(t, MiMoV2Omni, stream.Model)
+			require.NotEmpty(t, stream.Choices)
+			require.NotZero(t, stream.Created)
+
+			delta := stream.Choices[0].Delta.Content
+			fmt.Println(delta)
+			response += delta
+		}
+		require.Contains(t, response, "<test>")
 	})
 
 	err := client.Close()
