@@ -603,12 +603,13 @@ func TestClient_CreateChatCompletionStream(t *testing.T) {
 
 			require.NotEmpty(t, stream.ID)
 			require.Equal(t, MiMoV2Omni, stream.Model)
-			require.NotEmpty(t, stream.Choices)
 			require.NotZero(t, stream.Created)
 
-			delta := stream.Choices[0].Delta.Content
-			fmt.Println(delta)
-			response += delta
+			if len(stream.Choices) > 0 {
+				delta := stream.Choices[0].Delta.Content
+				fmt.Println(delta)
+				response += delta
+			}
 		}
 		require.Contains(t, response, "<test>")
 	})

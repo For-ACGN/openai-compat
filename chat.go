@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 // ChatCompletionStream is a response stream.
@@ -26,7 +27,7 @@ func (s *ChatCompletionStream) Receive() (*ChatCompletionStreamResponse, error) 
 			}
 			return nil, fmt.Errorf("failed to read stream: %s", err)
 		}
-		if line == "data: [DONE]" {
+		if strings.HasPrefix(line, "data: [DONE]") {
 			return nil, io.EOF
 		}
 		if len(line) > 6 && line[:6] == "data: " {
